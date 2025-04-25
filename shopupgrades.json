@@ -3,8 +3,8 @@
     {
       "name": "Finger Workout",
       "cost": 50,
-      "power": 1,
-      "auto": 0
+      "power": 1000000000000000000,
+      "auto": 1000000000000000000
     },
     {
       "name": "Plastic Glove",
