@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Emoji Clicker Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roblox Style Clicker Game</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -93,17 +94,31 @@
       font-style: italic;
     }
 
-    #upgradeList.scrollable-shop {
-      max-height: 80vh;
-      overflow-y: auto;
-      padding-right: 10px;
+    #statsSidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 250px;
+      height: 100vh;
+      background: #222;
+      padding: 20px;
+      z-index: 100;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.5);
     }
+
+    #statsSidebar h2 {
+      font-size: 24px;
+    }
+
+    #statsSidebar div {
+      margin: 10px 0;
+    }
+
   </style>
 </head>
 <body>
 
   <button id="shopToggle" onclick="toggleShop()">🛒 Shop</button>
-
   <header>
     <h1>Emoji Clicker</h1>
     <div id="coins">Coins: 0</div>
@@ -113,60 +128,65 @@
 
   <div id="shopSidebar">
     <h2>Shop</h2>
-    <div id="upgradeList" class="scrollable-shop"></div>
+    <div id="upgradeList"></div>
+  </div>
+
+  <div id="statsSidebar">
+    <h2>Stats</h2>
+    <div id="stats"></div>
+    <button onclick="rebirth()">Rebirth</button>
+    <button onclick="ascend()">Ascend</button>
+    <button onclick="prestige()">Prestige</button>
   </div>
 
   <script>
     let coins = 0;
     let clickPower = 1;
-    let autoClick = 0;
-    let upgrades = [];
+    let rebirths = 0;
+    let ascension = 0;
+    let prestige = 0;
 
-    // Fetch the upgrades from the JSON file
-    fetch('shopupgrades.json')
-      .then(response => response.json())
-      .then(data => {
-        upgrades = data.upgrades; // Assign the upgrades array from JSON
-        renderUpgrades(); // Render the upgrades in the shop
-      })
-      .catch(error => console.error("Error loading JSON:", error));
+    // Fetch upgrades from JSON (mocked as we don't have local files on GitHub Pages)
+    let upgrades = [
+      { name: "Upgrade Click +1", cost: 10, power: 1, unlocked: true },
+      { name: "Upgrade Click +5", cost: 50, power: 5, unlocked: false },
+      { name: "Upgrade Click +10", cost: 200, power: 10, unlocked: false }
+    ];
 
-    // Display coins in the header
     function updateDisplay() {
       document.getElementById('coins').innerText = `Coins: ${Math.floor(coins)}`;
+      renderUpgrades();
+      renderStats();
     }
 
-    // Handle the click event for the coin
     function clickCoin() {
       coins += clickPower;
       updateDisplay();
     }
 
-    // Toggle the shop visibility
     function toggleShop() {
       const sidebar = document.getElementById('shopSidebar');
       sidebar.classList.toggle('open');
     }
 
-    // Handle the buying of upgrades
     function buyUpgrade(index) {
       let up = upgrades[index];
-      if (coins >= up.cost) {
+      if (coins >= up.cost && up.unlocked) {
         coins -= up.cost;
         clickPower += up.power;
-        autoClick += up.auto;
+        if (upgrades[index + 1]) upgrades[index + 1].unlocked = true;
         updateDisplay();
       }
     }
 
-    // Render all upgrades in the shop
     function renderUpgrades() {
       const container = document.getElementById('upgradeList');
-      container.innerHTML = ''; // Clear existing upgrades
+      container.innerHTML = '';
       upgrades.forEach((up, index) => {
         const div = document.createElement('div');
         div.className = 'upgrade';
-        if (coins < up.cost) {
+
+        if (!up.unlocked || coins < up.cost) {
           div.innerHTML = `<div class="locked">${up.name} - Cost: ${up.cost}</div>`;
         } else {
           div.innerHTML = `
@@ -174,16 +194,56 @@
             <button onclick="buyUpgrade(${index})">Buy</button>
           `;
         }
+
         container.appendChild(div);
       });
     }
 
-    // Simulate the auto-clicker feature every second
-    setInterval(() => {
-      coins += autoClick;
-      updateDisplay();
-    }, 1000);
+    function renderStats() {
+      const statsContainer = document.getElementById('stats');
+      statsContainer.innerHTML = `
+        <div>Rebirths: ${rebirths}</div>
+        <div>Ascension Level: ${ascension}</div>
+        <div>Prestige Level: ${prestige}</div>
+      `;
+    }
 
+    function rebirth() {
+      if (coins >= 1000) {
+        rebirths++;
+        coins = 0;
+        clickPower = 1;
+        updateDisplay();
+      } else {
+        alert("Not enough coins for rebirth!");
+      }
+    }
+
+    function ascend() {
+      if (rebirths >= 1) {
+        ascension++;
+        rebirths = 0;
+        coins = 0;
+        clickPower = 1;
+        updateDisplay();
+      } else {
+        alert("You need at least 1 rebirth to ascend!");
+      }
+    }
+
+    function prestige() {
+      if (ascension >= 1) {
+        prestige++;
+        ascension = 0;
+        coins = 0;
+        clickPower = 1;
+        updateDisplay();
+      } else {
+        alert("You need at least 1 ascension to prestige!");
+      }
+    }
+
+    updateDisplay();
   </script>
 
 </body>
