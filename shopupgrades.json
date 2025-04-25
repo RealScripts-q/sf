@@ -1,70 +1,9 @@
 {
   "upgrades": [
-    {
-      "name": "Finger Workout",
-      "cost": 50,
-      "power": 1000000000000000000,
-      "auto": 1000000000000000000
-    },
-    {
-      "name": "Plastic Glove",
-      "cost": 100,
-      "power": 2,
-      "auto": 0
-    },
-    {
-      "name": "Golden Tapper",
-      "cost": 150,
-      "power": 3,
-      "auto": 1
-    },
-    {
-      "name": "Speedy Tap",
-      "cost": 200,
-      "power": 5,
-      "auto": 1
-    },
-    {
-      "name": "Iron Finger",
-      "cost": 300,
-      "power": 7,
-      "auto": 2
-    },
-    {
-      "name": "Ruby Ring",
-      "cost": 400,
-      "power": 10,
-      "auto": 3
-    },
-    {
-      "name": "Auto-Tapper",
-      "cost": 500,
-      "power": 15,
-      "auto": 5
-    },
-    {
-      "name": "Gaming Mouse",
-      "cost": 600,
-      "power": 20,
-      "auto": 7
-    },
-    {
-      "name": "Tapstorm",
-      "cost": 700,
-      "power": 30,
-      "auto": 10
-    },
-    {
-      "name": "Robot Finger",
-      "cost": 800,
-      "power": 40,
-      "auto": 12
-    },
-    {
-      "name": "Custom Upgrade",
-      "cost": 1000,
-      "power": 50,
-      "auto": 20
-    }
+    { "name": "Upgrade Click +1", "cost": 10, "power": 1, "unlocked": true },
+    { "name": "Upgrade Click +5", "cost": 50, "power": 5, "unlocked": false },
+    { "name": "Upgrade Click +10", "cost": 200, "power": 10, "unlocked": false },
+    { "name": "Upgrade Click +20", "cost": 500, "power": 20, "unlocked": false },
+    { "name": "Upgrade Click +50", "cost": 1000, "power": 50, "unlocked": false }
   ]
 }
