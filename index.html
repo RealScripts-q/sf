@@ -3,131 +3,266 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DeppSCAPT - AI Chat</title>
+  <title>DeppSCAPT - Your Trainable AI</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
-      padding: 0;
-      background-color: #f4f4f4;
+      display: flex;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      background-color: #111;
+      color: #eee;
     }
-    #chat-container {
-      width: 100%;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    #chat-box {
-      background-color: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0px 0px 5px rgba(0,0,0,0.1);
-      max-height: 400px;
-      overflow-y: auto;
-      margin-bottom: 20px;
-    }
-    #chat-box p {
-      margin: 10px 0;
-    }
-    input[type="text"] {
-      width: calc(100% - 20px);
+    .sidebar {
+      width: 250px;
+      background: #222;
       padding: 10px;
-      font-size: 16px;
+      box-shadow: 2px 0 5px #0ff;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .sidebar button {
+      background: #0ff;
+      color: #000;
+      border: none;
+      padding: 10px;
       margin-bottom: 10px;
       border-radius: 5px;
-      border: 1px solid #ccc;
+      cursor: pointer;
+      font-weight: bold;
     }
-    button {
-      width: 100%;
+    .sidebar .chat-history {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .chat-item {
+      background: #333;
       padding: 10px;
-      font-size: 16px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
+      margin-bottom: 5px;
       border-radius: 5px;
       cursor: pointer;
+      font-size: 14px;
     }
-    button:hover {
-      background-color: #45a049;
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    #chatbox {
+      flex: 1;
+      overflow-y: auto;
+      background: #333;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+    }
+    .input-section input {
+      width: 80%;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      background: #444;
+      color: #fff;
+      margin-right: 10px;
+    }
+    .input-section button {
+      padding: 10px 20px;
+      background: #0ff;
+      border: none;
+      border-radius: 5px;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .file-upload input {
+      margin-top: 10px;
+      background: #444;
+      padding: 10px;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
 
-  <div id="chat-container">
-    <div id="chat-box">
-      <!-- Chat history will be appended here -->
+  <div class="sidebar">
+    <button onclick="startNewChat()">➕ New Chat</button>
+    <button onclick="resetChatHistory()">❌ Reset Memory</button>
+    <button onclick="exportMemory()">💾 Export Memory</button>
+    <button onclick="importMemory()">📥 Import Memory</button>
+    <div class="chat-history" id="chatHistory">
+      <!-- Previous chats will be listed here -->
     </div>
-    <input type="text" id="user-input" placeholder="Type a message...">
-    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <div class="main">
+    <h1>DeppSCAPT</h1>
+    <div id="chatbox">Loading memory...</div>
+    <div class="input-section">
+      <input type="text" id="userInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter')sendMessage()">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+    <div class="file-upload" id="file-upload"></div>
   </div>
 
   <script>
-    const chatBox = document.getElementById('chat-box');
-    const userInput = document.getElementById('user-input');
+    let knowledgeBase = {};
+    let chatSessions = JSON.parse(localStorage.getItem('deppscapt_chats')) || [];
+    let currentChat = [];
 
-    // Function to append messages to the chat box
-    function appendMessage(sender, message) {
-      const messageElement = document.createElement('p');
-      messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
-      chatBox.appendChild(messageElement);
-      chatBox.scrollTop = chatBox.scrollHeight;
+    // NLP: Sentiment analysis function
+    function analyzeSentiment(text) {
+      // Simple sentiment analysis: can be extended to more advanced NLP libraries
+      const positiveWords = ['happy', 'good', 'great', 'awesome', 'love'];
+      const negativeWords = ['sad', 'angry', 'bad', 'hate', 'terrible'];
+
+      const textLower = text.toLowerCase();
+      let sentiment = 'neutral';
+
+      if (positiveWords.some(word => textLower.includes(word))) {
+        sentiment = 'positive';
+      } else if (negativeWords.some(word => textLower.includes(word))) {
+        sentiment = 'negative';
+      }
+
+      return sentiment;
     }
 
-    // Function to handle user message
+    // Send message
     function sendMessage() {
-      const userMessage = userInput.value;
-      if (userMessage.trim() !== "") {
-        appendMessage("You", userMessage);  // Append user message to chat
+      const inputField = document.getElementById('userInput');
+      const userInput = inputField.value.trim().toLowerCase();
+      if (!userInput) return;
 
-        // Add the user message to history
-        let chatHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
-        chatHistory.push({ sender: "You", message: userMessage });
+      appendMessage("You: " + userInput);
 
-        // Simulate AI response
-        const aiMessage = generateAIResponse(userMessage);
-        appendMessage("DeppSCAPT", aiMessage);  // Append AI response to chat
+      let response = knowledgeBase[userInput];
+      const sentiment = analyzeSentiment(userInput);
 
-        // Add AI response to history
-        chatHistory.push({ sender: "DeppSCAPT", message: aiMessage });
-
-        // Save updated chat history to localStorage
-        localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
-
-        // Clear the input field
-        userInput.value = "";
-      }
-    }
-
-    // Function to simulate AI response based on the chat history
-    function generateAIResponse(userMessage) {
-      let response = "I don't know what to say to that.";  // Default response
-
-      // Get chat history from localStorage
-      let chatHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
-
-      // Simple AI training logic: look at the last user message and respond based on it
-      if (chatHistory.length > 1) {
-        const lastUserMessage = chatHistory[chatHistory.length - 2].message.toLowerCase();
-        if (lastUserMessage.includes("hi") || lastUserMessage.includes("hello")) {
-          response = "Hello! How can I help you today?";
-        } else if (lastUserMessage.includes("how are you")) {
-          response = "I'm doing well, thank you! How about you?";
-        } else if (lastUserMessage.includes("good")) {
-          response = "I'm glad you're doing good!";
+      // Customize response based on sentiment
+      if (sentiment === 'positive') {
+        response = "It seems you're in a good mood! 😊";
+      } else if (sentiment === 'negative') {
+        response = "I'm here to help you, everything will be okay. 🌈";
+      } else if (!response) {
+        response = "I don't know that yet. Teach me!";
+        let userAnswer = prompt("You said: " + userInput + "\nTeach me the answer:");
+        if (userAnswer) {
+          knowledgeBase[userInput] = userAnswer;
+          saveKnowledgeBase();
+          response = userAnswer;
+          saveToCurrentChat(userInput, userAnswer);
         }
+      } else {
+        saveToCurrentChat(userInput, response);
       }
 
-      return response;
+      setTimeout(() => {
+        appendMessage("DeppSCAPT: " + response);
+      }, 400);
+
+      inputField.value = '';
     }
 
-    // Load chat history on page load and display it
-    window.onload = function() {
-      let chatHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
-      chatHistory.forEach(msg => {
-        appendMessage(msg.sender, msg.message);
+    // Append message to chat
+    function appendMessage(message) {
+      const chatbox = document.getElementById('chatbox');
+      const msg = document.createElement('div');
+      msg.textContent = message;
+      chatbox.appendChild(msg);
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+
+    // Save to current chat
+    function saveToCurrentChat(question, answer) {
+      currentChat.push({ question, answer });
+    }
+
+    // Start new chat
+    function startNewChat() {
+      if (currentChat.length > 0) {
+        chatSessions.push(currentChat);
+        localStorage.setItem('deppscapt_chats', JSON.stringify(chatSessions));
+        updateChatHistory();
+      }
+      currentChat = [];
+      document.getElementById('chatbox').innerHTML = "🧠 New chat started!";
+    }
+
+    // Update chat history
+    function updateChatHistory() {
+      const chatHistoryDiv = document.getElementById('chatHistory');
+      chatHistoryDiv.innerHTML = '';
+
+      chatSessions.forEach((session, index) => {
+        const chatItem = document.createElement('div');
+        chatItem.className = 'chat-item';
+        chatItem.textContent = "Chat #" + (index + 1);
+        chatItem.onclick = () => loadChatSession(index);
+        chatHistoryDiv.appendChild(chatItem);
       });
-    };
+    }
+
+    // Load chat session
+    function loadChatSession(index) {
+      const session = chatSessions[index];
+      document.getElementById('chatbox').innerHTML = '';
+
+      session.forEach(msg => {
+        appendMessage("You: " + msg.question);
+        appendMessage("DeppSCAPT: " + msg.answer);
+      });
+    }
+
+    // Save memory to localStorage
+    function saveKnowledgeBase() {
+      localStorage.setItem('deppscapt_memory', JSON.stringify(knowledgeBase));
+    }
+
+    // Reset memory (Wipe Brain)
+    function resetChatHistory() {
+      if (confirm("Are you sure you want to reset the entire AI memory?")) {
+        knowledgeBase = {};
+        localStorage.setItem('deppscapt_memory', JSON.stringify(knowledgeBase));
+        alert("AI memory reset!");
+      }
+    }
+
+    // Export memory (Save to file)
+    function exportMemory() {
+      const blob = new Blob([JSON.stringify(knowledgeBase)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'deppscapt_memory.json';
+      link.click();
+    }
+
+    // Import memory (Load from file)
+    function importMemory() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = (event) => {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            knowledgeBase = JSON.parse(reader.result);
+            saveKnowledgeBase();
+            alert("Memory imported successfully!");
+          } catch (error) {
+            alert("Error importing memory: " + error.message);
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
   </script>
+
 </body>
 </html>
