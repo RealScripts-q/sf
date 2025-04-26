@@ -94,8 +94,6 @@
     <button onclick="resetChatHistory()">❌ Reset Memory</button>
     <button onclick="exportMemory()">💾 Export Memory</button>
     <button onclick="importMemory()">📥 Import Memory</button>
-    <button onclick="uploadFile()">📂 Upload File</button>
-    <button onclick="fetchWebsiteData()">🌐 Fetch Website Data</button>
     <div class="chat-history" id="chatHistory">
       <!-- Previous chats will be listed here -->
     </div>
@@ -115,6 +113,68 @@
     let knowledgeBase = {};
     let chatSessions = JSON.parse(localStorage.getItem('deppscapt_chats')) || [];
     let currentChat = [];
+
+    // Fetch data from YouTube, Wikipedia, and Reddit on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchDataFromWikipedia();
+      fetchDataFromReddit();
+      fetchDataFromYouTube();
+    });
+
+    // Fetch data from Wikipedia
+    function fetchDataFromWikipedia() {
+      const wikiURL = 'https://en.wikipedia.org/wiki/Special:Random'; // Fetch a random Wikipedia article
+      fetch(wikiURL)
+        .then(response => response.text())
+        .then(data => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(data, 'text/html');
+          const bodyText = doc.body.innerText;
+          const lines = bodyText.split("\n");
+          lines.forEach(line => {
+            knowledgeBase[line.trim().toLowerCase()] = line.trim();
+          });
+          saveKnowledgeBase();
+          console.log('Wikipedia data fetched!');
+        })
+        .catch(error => console.error("Error fetching Wikipedia data:", error));
+    }
+
+    // Fetch data from Reddit
+    function fetchDataFromReddit() {
+      const subreddit = 'learnprogramming'; // Fetch posts from the programming subreddit
+      const redditURL = `https://www.reddit.com/r/${subreddit}.json`;
+      fetch(redditURL)
+        .then(response => response.json())
+        .then(data => {
+          data.data.children.forEach(post => {
+            knowledgeBase[post.data.title.toLowerCase()] = post.data.title;
+            knowledgeBase[post.data.selftext.toLowerCase()] = post.data.selftext;
+          });
+          saveKnowledgeBase();
+          console.log('Reddit data fetched!');
+        })
+        .catch(error => console.error("Error fetching Reddit data:", error));
+    }
+
+    // Fetch data from YouTube
+    function fetchDataFromYouTube() {
+      const apiKey = 'YOUR_YOUTUBE_API_KEY'; // Replace with your YouTube API key
+      const channelId = 'UC_x5XG1OV2P6uZZ5bZuG7pWQ'; // Example: Google Developers channel
+      const youtubeURL = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&channelId=${channelId}&order=date&part=snippet&type=video`;
+
+      fetch(youtubeURL)
+        .then(response => response.json())
+        .then(data => {
+          data.items.forEach(video => {
+            knowledgeBase[video.snippet.title.toLowerCase()] = video.snippet.title;
+            knowledgeBase[video.snippet.description.toLowerCase()] = video.snippet.description;
+          });
+          saveKnowledgeBase();
+          console.log('YouTube data fetched!');
+        })
+        .catch(error => console.error("Error fetching YouTube data:", error));
+    }
 
     // Load memory
     if (localStorage.getItem('deppscapt_memory')) {
@@ -239,67 +299,24 @@
 
     // Import memory (Load from file)
     function importMemory() {
-      const inputFile = document.createElement('input');
-      inputFile.type = 'file';
-      inputFile.accept = '.json';
-      inputFile.onchange = function (e) {
-        const file = e.target.files[0];
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = (event) => {
+        const file = event.target.files[0];
         const reader = new FileReader();
-        reader.onload = function (event) {
-          knowledgeBase = JSON.parse(event.target.result);
-          localStorage.setItem('deppscapt_memory', JSON.stringify(knowledgeBase));
-          alert("Memory imported successfully!");
+        reader.onload = () => {
+          try {
+            knowledgeBase = JSON.parse(reader.result);
+            saveKnowledgeBase();
+            alert("Memory imported successfully!");
+          } catch (error) {
+            alert("Error importing memory: " + error.message);
+          }
         };
         reader.readAsText(file);
       };
-      inputFile.click();
-    }
-
-    // Upload File to Train AI
-    function uploadFile() {
-      const inputFile = document.createElement('input');
-      inputFile.type = 'file';
-      inputFile.accept = '.txt,.json';
-      inputFile.onchange = function (e) {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = function (event) {
-          const fileContent = event.target.result;
-          // Split the file into sections to train the AI
-          const lines = fileContent.split("\n");
-          lines.forEach(line => {
-            knowledgeBase[line.trim().toLowerCase()] = line.trim();
-          });
-          saveKnowledgeBase();
-          alert("File uploaded and memory updated!");
-        };
-        reader.readAsText(file);
-      };
-      inputFile.click();
-    }
-
-    // Fetch data from a website to train the AI
-    function fetchWebsiteData() {
-      const url = prompt("Enter the website URL to fetch data from:");
-      if (!url) return;
-
-      fetch(url)
-        .then(response => response.text())
-        .then(data => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(data, 'text/html');
-          const bodyText = doc.body.innerText;
-          const lines = bodyText.split("\n");
-          lines.forEach(line => {
-            knowledgeBase[line.trim().toLowerCase()] = line.trim();
-          });
-          saveKnowledgeBase();
-          alert("Website data fetched and AI memory updated!");
-        })
-        .catch(error => {
-          console.error("Error fetching data from the website:", error);
-          alert("Failed to fetch data from the website.");
-        });
+      input.click();
     }
   </script>
 
