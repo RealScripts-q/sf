@@ -21,10 +21,12 @@
       padding: 20px;
       border-radius: 10px;
       box-shadow: 0 0 10px #0ff;
+      overflow-y: auto;
+      max-height: 95vh;
     }
 
     #chatbox {
-      height: 250px;
+      height: 200px;
       overflow-y: auto;
       background: #333;
       padding: 10px;
@@ -72,10 +74,14 @@
     </div>
 
     <div class="train-section">
-      <h2>Train DeppSCAPT</h2>
+      <h2>Train DeppSCAPT (Manual)</h2>
       <input type="text" id="newQuestion" placeholder="New question...">
       <input type="text" id="newAnswer" placeholder="New answer...">
       <button onclick="trainAI()">Train</button>
+
+      <h2>Train from File</h2>
+      <input type="file" id="fileInput" accept=".json">
+      <button onclick="trainFromFile()">Upload & Train</button>
     </div>
   </div>
 
@@ -130,6 +136,37 @@
         document.getElementById('newQuestion').value = '';
         document.getElementById('newAnswer').value = '';
       }
+    }
+
+    function trainFromFile() {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert("Please select a file first!");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const newKnowledge = JSON.parse(event.target.result);
+
+          if (typeof newKnowledge !== 'object') {
+            throw new Error("File is not a valid JSON object.");
+          }
+
+          // Merge new knowledge into current knowledge
+          knowledgeBase = { ...knowledgeBase, ...newKnowledge };
+
+          appendMessage(`✅ Trained with ${Object.keys(newKnowledge).length} new entries!`);
+        } catch (error) {
+          alert("Failed to read file: " + error.message);
+          console.error(error);
+        }
+      };
+
+      reader.readAsText(file);
     }
   </script>
 </body>
