@@ -79,6 +79,12 @@
       font-weight: bold;
       cursor: pointer;
     }
+    .file-upload input {
+      margin-top: 10px;
+      background: #444;
+      padding: 10px;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
@@ -88,6 +94,8 @@
     <button onclick="resetChatHistory()">❌ Reset Memory</button>
     <button onclick="exportMemory()">💾 Export Memory</button>
     <button onclick="importMemory()">📥 Import Memory</button>
+    <button onclick="uploadFile()">📂 Upload File</button>
+    <button onclick="fetchWebsiteData()">🌐 Fetch Website Data</button>
     <div class="chat-history" id="chatHistory">
       <!-- Previous chats will be listed here -->
     </div>
@@ -100,6 +108,7 @@
       <input type="text" id="userInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter')sendMessage()">
       <button onclick="sendMessage()">Send</button>
     </div>
+    <div class="file-upload" id="file-upload"></div>
   </div>
 
   <script>
@@ -244,6 +253,53 @@
         reader.readAsText(file);
       };
       inputFile.click();
+    }
+
+    // Upload File to Train AI
+    function uploadFile() {
+      const inputFile = document.createElement('input');
+      inputFile.type = 'file';
+      inputFile.accept = '.txt,.json';
+      inputFile.onchange = function (e) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          const fileContent = event.target.result;
+          // Split the file into sections to train the AI
+          const lines = fileContent.split("\n");
+          lines.forEach(line => {
+            knowledgeBase[line.trim().toLowerCase()] = line.trim();
+          });
+          saveKnowledgeBase();
+          alert("File uploaded and memory updated!");
+        };
+        reader.readAsText(file);
+      };
+      inputFile.click();
+    }
+
+    // Fetch data from a website to train the AI
+    function fetchWebsiteData() {
+      const url = prompt("Enter the website URL to fetch data from:");
+      if (!url) return;
+
+      fetch(url)
+        .then(response => response.text())
+        .then(data => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(data, 'text/html');
+          const bodyText = doc.body.innerText;
+          const lines = bodyText.split("\n");
+          lines.forEach(line => {
+            knowledgeBase[line.trim().toLowerCase()] = line.trim();
+          });
+          saveKnowledgeBase();
+          alert("Website data fetched and AI memory updated!");
+        })
+        .catch(error => {
+          console.error("Error fetching data from the website:", error);
+          alert("Failed to fetch data from the website.");
+        });
     }
   </script>
 
