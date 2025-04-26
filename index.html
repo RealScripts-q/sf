@@ -5,51 +5,69 @@
   <title>DeppSCAPT - Your Trainable AI</title>
   <style>
     body {
+      margin: 0;
+      display: flex;
+      height: 100vh;
       font-family: Arial, sans-serif;
       background-color: #111;
       color: #eee;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
     }
-
-    .container {
-      width: 400px;
+    .sidebar {
+      width: 250px;
       background: #222;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #0ff;
+      padding: 10px;
+      box-shadow: 2px 0 5px #0ff;
+      display: flex;
+      flex-direction: column;
       overflow-y: auto;
-      max-height: 95vh;
     }
-
-    #chatbox {
-      height: 200px;
+    .sidebar button {
+      background: #0ff;
+      color: #000;
+      border: none;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .sidebar .chat-history {
+      flex: 1;
       overflow-y: auto;
+    }
+    .chat-item {
       background: #333;
       padding: 10px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+    #chatbox {
+      flex: 1;
+      overflow-y: auto;
+      background: #333;
+      padding: 15px;
       border-radius: 5px;
       margin-bottom: 15px;
     }
-
-    .input-section input,
-    .train-section input {
-      width: 100%;
+    .input-section input {
+      width: 80%;
       padding: 10px;
-      margin-top: 10px;
       border: none;
       border-radius: 5px;
       background: #444;
       color: #fff;
+      margin-right: 10px;
     }
-
-    .input-section button,
-    .train-section button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
+    .input-section button {
+      padding: 10px 20px;
       background: #0ff;
       border: none;
       border-radius: 5px;
@@ -57,43 +75,37 @@
       font-weight: bold;
       cursor: pointer;
     }
-
-    .train-section h2 {
-      margin-top: 20px;
-    }
   </style>
 </head>
 <body>
-  <div class="container">
+
+  <div class="sidebar">
+    <button onclick="startNewChat()">➕ New Chat</button>
+    <div class="chat-history" id="chatHistory">
+      <!-- Previous chats will be listed here -->
+    </div>
+  </div>
+
+  <div class="main">
     <h1>DeppSCAPT</h1>
     <div id="chatbox">Loading memory...</div>
-
     <div class="input-section">
-      <input type="text" id="userInput" placeholder="Type your message...">
+      <input type="text" id="userInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter')sendMessage()">
       <button onclick="sendMessage()">Send</button>
-    </div>
-
-    <div class="train-section">
-      <h2>Train DeppSCAPT (Manual)</h2>
-      <input type="text" id="newQuestion" placeholder="New question...">
-      <input type="text" id="newAnswer" placeholder="New answer...">
-      <button onclick="trainAI()">Train</button>
-
-      <h2>Train from File</h2>
-      <input type="file" id="fileInput" accept=".json">
-      <button onclick="trainFromFile()">Upload & Train</button>
     </div>
   </div>
 
   <script>
     let knowledgeBase = {};
+    let chatSessions = [];
+    let currentChat = [];
 
-    // Load memory from external store.json
+    // Load initial memory
     fetch('store.json')
       .then(response => response.json())
       .then(data => {
         knowledgeBase = data;
-        document.getElementById('chatbox').innerText = "Memory loaded! Ask me something.";
+        document.getElementById('chatbox').innerText = "Memory loaded! Start chatting!";
       })
       .catch(error => {
         document.getElementById('chatbox').innerText = "Failed to load memory.";
@@ -101,21 +113,31 @@
       });
 
     function sendMessage() {
-      const userInput = document.getElementById('userInput').value.trim().toLowerCase();
+      const inputField = document.getElementById('userInput');
+      const userInput = inputField.value.trim().toLowerCase();
       if (!userInput) return;
 
       appendMessage("You: " + userInput);
 
       let response = knowledgeBase[userInput];
       if (!response) {
-        response = "I don't know that yet. Train me!";
+        response = "I don't know that yet. Tell me the answer!";
+        // Let user train right away
+        let userAnswer = prompt("You said: " + userInput + "\nTeach me the answer:");
+        if (userAnswer) {
+          knowledgeBase[userInput] = userAnswer;
+          response = userAnswer;
+          saveToCurrentChat(userInput, userAnswer);
+        }
+      } else {
+        saveToCurrentChat(userInput, response);
       }
 
       setTimeout(() => {
         appendMessage("DeppSCAPT: " + response);
-      }, 500);
+      }, 400);
 
-      document.getElementById('userInput').value = '';
+      inputField.value = '';
     }
 
     function appendMessage(message) {
@@ -126,48 +148,42 @@
       chatbox.scrollTop = chatbox.scrollHeight;
     }
 
-    function trainAI() {
-      const newQuestion = document.getElementById('newQuestion').value.trim().toLowerCase();
-      const newAnswer = document.getElementById('newAnswer').value.trim();
-
-      if (newQuestion && newAnswer) {
-        knowledgeBase[newQuestion] = newAnswer;
-        appendMessage(`Trained: "${newQuestion}" -> "${newAnswer}"`);
-        document.getElementById('newQuestion').value = '';
-        document.getElementById('newAnswer').value = '';
-      }
+    function saveToCurrentChat(question, answer) {
+      currentChat.push({ question, answer });
     }
 
-    function trainFromFile() {
-      const fileInput = document.getElementById('fileInput');
-      const file = fileInput.files[0];
-
-      if (!file) {
-        alert("Please select a file first!");
-        return;
+    function startNewChat() {
+      if (currentChat.length > 0) {
+        chatSessions.push(currentChat);
+        updateChatHistory();
       }
+      currentChat = [];
+      document.getElementById('chatbox').innerHTML = "🧠 New chat started!";
+    }
 
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        try {
-          const newKnowledge = JSON.parse(event.target.result);
+    function updateChatHistory() {
+      const chatHistoryDiv = document.getElementById('chatHistory');
+      chatHistoryDiv.innerHTML = '';
 
-          if (typeof newKnowledge !== 'object') {
-            throw new Error("File is not a valid JSON object.");
-          }
+      chatSessions.forEach((session, index) => {
+        const chatItem = document.createElement('div');
+        chatItem.className = 'chat-item';
+        chatItem.textContent = "Chat #" + (index + 1);
+        chatItem.onclick = () => loadChatSession(index);
+        chatHistoryDiv.appendChild(chatItem);
+      });
+    }
 
-          // Merge new knowledge into current knowledge
-          knowledgeBase = { ...knowledgeBase, ...newKnowledge };
+    function loadChatSession(index) {
+      const session = chatSessions[index];
+      document.getElementById('chatbox').innerHTML = '';
 
-          appendMessage(`✅ Trained with ${Object.keys(newKnowledge).length} new entries!`);
-        } catch (error) {
-          alert("Failed to read file: " + error.message);
-          console.error(error);
-        }
-      };
-
-      reader.readAsText(file);
+      session.forEach(msg => {
+        appendMessage("You: " + msg.question);
+        appendMessage("DeppSCAPT: " + msg.answer);
+      });
     }
   </script>
+
 </body>
 </html>
