@@ -1,9 +1,0 @@
-{
-  "upgrades": [
-    { "name": "Upgrade Click +1", "cost": 10, "power": 1, "unlocked": true },
-    { "name": "Upgrade Click +5", "cost": 50, "power": 5, "unlocked": false },
-    { "name": "Upgrade Click +10", "cost": 200, "power": 10, "unlocked": false },
-    { "name": "Upgrade Click +20", "cost": 500, "power": 20, "unlocked": false },
-    { "name": "Upgrade Click +50", "cost": 1000, "power": 50, "unlocked": false }
-  ]
-}
