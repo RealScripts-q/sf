@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DeppSCAPT - Your Trainable AI</title>
   <style>
     body {
       margin: 0;
       display: flex;
-      height: 100vh;
       font-family: Arial, sans-serif;
+      height: 100vh;
       background-color: #111;
       color: #eee;
     }
@@ -49,6 +50,9 @@
       flex-direction: column;
       padding: 20px;
     }
+    h1 {
+      text-align: center;
+    }
     #chatbox {
       flex: 1;
       overflow-y: auto;
@@ -81,6 +85,9 @@
 
   <div class="sidebar">
     <button onclick="startNewChat()">➕ New Chat</button>
+    <button onclick="resetChatHistory()">❌ Reset Memory</button>
+    <button onclick="exportMemory()">💾 Export Memory</button>
+    <button onclick="importMemory()">📥 Import Memory</button>
     <div class="chat-history" id="chatHistory">
       <!-- Previous chats will be listed here -->
     </div>
@@ -97,21 +104,29 @@
 
   <script>
     let knowledgeBase = {};
-    let chatSessions = [];
+    let chatSessions = JSON.parse(localStorage.getItem('deppscapt_chats')) || [];
     let currentChat = [];
 
-    // Load initial memory
-    fetch('store.json')
-      .then(response => response.json())
-      .then(data => {
-        knowledgeBase = data;
-        document.getElementById('chatbox').innerText = "Memory loaded! Start chatting!";
-      })
-      .catch(error => {
-        document.getElementById('chatbox').innerText = "Failed to load memory.";
-        console.error('Error loading store.json:', error);
-      });
+    // Load memory
+    if (localStorage.getItem('deppscapt_memory')) {
+      knowledgeBase = JSON.parse(localStorage.getItem('deppscapt_memory'));
+      document.getElementById('chatbox').innerText = "Memory loaded from your saved brain! 🧠";
+      updateChatHistory();
+    } else {
+      fetch('store.json')
+        .then(response => response.json())
+        .then(data => {
+          knowledgeBase = data;
+          document.getElementById('chatbox').innerText = "Memory loaded from default store.json!";
+          updateChatHistory();
+        })
+        .catch(error => {
+          document.getElementById('chatbox').innerText = "Failed to load memory.";
+          console.error('Error loading store.json:', error);
+        });
+    }
 
+    // Send message
     function sendMessage() {
       const inputField = document.getElementById('userInput');
       const userInput = inputField.value.trim().toLowerCase();
@@ -121,11 +136,11 @@
 
       let response = knowledgeBase[userInput];
       if (!response) {
-        response = "I don't know that yet. Tell me the answer!";
-        // Let user train right away
+        response = "I don't know that yet. Teach me!";
         let userAnswer = prompt("You said: " + userInput + "\nTeach me the answer:");
         if (userAnswer) {
           knowledgeBase[userInput] = userAnswer;
+          saveKnowledgeBase();
           response = userAnswer;
           saveToCurrentChat(userInput, userAnswer);
         }
@@ -140,6 +155,7 @@
       inputField.value = '';
     }
 
+    // Append message to chat
     function appendMessage(message) {
       const chatbox = document.getElementById('chatbox');
       const msg = document.createElement('div');
@@ -148,19 +164,23 @@
       chatbox.scrollTop = chatbox.scrollHeight;
     }
 
+    // Save to current chat
     function saveToCurrentChat(question, answer) {
       currentChat.push({ question, answer });
     }
 
+    // Start new chat
     function startNewChat() {
       if (currentChat.length > 0) {
         chatSessions.push(currentChat);
+        localStorage.setItem('deppscapt_chats', JSON.stringify(chatSessions));
         updateChatHistory();
       }
       currentChat = [];
       document.getElementById('chatbox').innerHTML = "🧠 New chat started!";
     }
 
+    // Update chat history
     function updateChatHistory() {
       const chatHistoryDiv = document.getElementById('chatHistory');
       chatHistoryDiv.innerHTML = '';
@@ -174,6 +194,7 @@
       });
     }
 
+    // Load chat session
     function loadChatSession(index) {
       const session = chatSessions[index];
       document.getElementById('chatbox').innerHTML = '';
@@ -182,6 +203,47 @@
         appendMessage("You: " + msg.question);
         appendMessage("DeppSCAPT: " + msg.answer);
       });
+    }
+
+    // Save memory to localStorage
+    function saveKnowledgeBase() {
+      localStorage.setItem('deppscapt_memory', JSON.stringify(knowledgeBase));
+    }
+
+    // Reset memory (Wipe Brain)
+    function resetChatHistory() {
+      if (confirm("Are you sure you want to reset the entire AI memory?")) {
+        knowledgeBase = {};
+        localStorage.setItem('deppscapt_memory', JSON.stringify(knowledgeBase));
+        alert("AI memory reset!");
+      }
+    }
+
+    // Export memory (Save to file)
+    function exportMemory() {
+      const blob = new Blob([JSON.stringify(knowledgeBase)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'deppscapt_memory.json';
+      link.click();
+    }
+
+    // Import memory (Load from file)
+    function importMemory() {
+      const inputFile = document.createElement('input');
+      inputFile.type = 'file';
+      inputFile.accept = '.json';
+      inputFile.onchange = function (e) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          knowledgeBase = JSON.parse(event.target.result);
+          localStorage.setItem('deppscapt_memory', JSON.stringify(knowledgeBase));
+          alert("Memory imported successfully!");
+        };
+        reader.readAsText(file);
+      };
+      inputFile.click();
     }
   </script>
 
