@@ -85,14 +85,6 @@
       padding: 10px;
       border-radius: 5px;
     }
-    .code-response {
-      background: #222;
-      color: #0ff;
-      padding: 10px;
-      border-radius: 5px;
-      font-family: monospace;
-      white-space: pre-wrap;
-    }
   </style>
 </head>
 <body>
@@ -117,6 +109,7 @@
     <div class="file-upload" id="file-upload"></div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.4.0/math.min.js"></script>
   <script>
     let knowledgeBase = {};
     let chatSessions = JSON.parse(localStorage.getItem('deppscapt_chats')) || [];
@@ -129,17 +122,78 @@
       fetchDataFromYouTube();
     });
 
-    // Teach AI how to code (sample function)
-    function teachCode(query, codeExample) {
-      knowledgeBase[query.toLowerCase()] = codeExample;
-      saveKnowledgeBase();
-      alert("Code learned successfully!");
+    // Fetch data from Wikipedia
+    function fetchDataFromWikipedia() {
+      const wikiURL = 'https://en.wikipedia.org/wiki/Special:Random'; // Fetch a random Wikipedia article
+      fetch(wikiURL)
+        .then(response => response.text())
+        .then(data => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(data, 'text/html');
+          const bodyText = doc.body.innerText;
+          const lines = bodyText.split("\n");
+          lines.forEach(line => {
+            knowledgeBase[line.trim().toLowerCase()] = line.trim();
+          });
+          saveKnowledgeBase();
+          console.log('Wikipedia data fetched!');
+        })
+        .catch(error => console.error("Error fetching Wikipedia data:", error));
     }
 
-    // Check if the query is related to coding
-    function isCodingQuery(query) {
-      const codingKeywords = ['javascript', 'python', 'html', 'css', 'programming', 'function', 'code'];
-      return codingKeywords.some(keyword => query.toLowerCase().includes(keyword));
+    // Fetch data from Reddit
+    function fetchDataFromReddit() {
+      const subreddit = 'learnprogramming'; // Fetch posts from the programming subreddit
+      const redditURL = `https://www.reddit.com/r/${subreddit}.json`;
+      fetch(redditURL)
+        .then(response => response.json())
+        .then(data => {
+          data.data.children.forEach(post => {
+            knowledgeBase[post.data.title.toLowerCase()] = post.data.title;
+            knowledgeBase[post.data.selftext.toLowerCase()] = post.data.selftext;
+          });
+          saveKnowledgeBase();
+          console.log('Reddit data fetched!');
+        })
+        .catch(error => console.error("Error fetching Reddit data:", error));
+    }
+
+    // Fetch data from YouTube
+    function fetchDataFromYouTube() {
+      const apiKey = 'YOUR_YOUTUBE_API_KEY'; // Replace with your YouTube API key
+      const channelId = 'UC_x5XG1OV2P6uZZ5bZuG7pWQ'; // Example: Google Developers channel
+      const youtubeURL = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&channelId=${channelId}&order=date&part=snippet&type=video`;
+
+      fetch(youtubeURL)
+        .then(response => response.json())
+        .then(data => {
+          data.items.forEach(video => {
+            knowledgeBase[video.snippet.title.toLowerCase()] = video.snippet.title;
+            knowledgeBase[video.snippet.description.toLowerCase()] = video.snippet.description;
+          });
+          saveKnowledgeBase();
+          console.log('YouTube data fetched!');
+        })
+        .catch(error => console.error("Error fetching YouTube data:", error));
+    }
+
+    // Load memory
+    if (localStorage.getItem('deppscapt_memory')) {
+      knowledgeBase = JSON.parse(localStorage.getItem('deppscapt_memory'));
+      document.getElementById('chatbox').innerText = "Memory loaded from your saved brain! 🧠";
+      updateChatHistory();
+    } else {
+      fetch('store.json')
+        .then(response => response.json())
+        .then(data => {
+          knowledgeBase = data;
+          document.getElementById('chatbox').innerText = "Memory loaded from default store.json!";
+          updateChatHistory();
+        })
+        .catch(error => {
+          document.getElementById('chatbox').innerText = "Failed to load memory.";
+          console.error('Error loading store.json:', error);
+        });
     }
 
     // Send message
@@ -150,22 +204,12 @@
 
       appendMessage("You: " + userInput);
 
-      let response = knowledgeBase[userInput];
-      
-      // If it's a coding-related query
-      if (isCodingQuery(userInput)) {
-        if (!response) {
-          response = "I don't know how to code that yet. Teach me!";
-          let codeSnippet = prompt("You said: " + userInput + "\nTeach me the code snippet:");
-          if (codeSnippet) {
-            teachCode(userInput, codeSnippet);
-            response = "Got it! Here's the code you taught me:\n" + codeSnippet;
-          }
-        } else {
-          response = "Here's the code I know:\n" + response;
-        }
+      // Check if the input is a mathematical expression
+      if (isMathExpression(userInput)) {
+        const result = calculateMathExpression(userInput);
+        appendMessage("DeppSCAPT: " + result);
       } else {
-        // Handle non-coding queries
+        let response = knowledgeBase[userInput];
         if (!response) {
           response = "I don't know that yet. Teach me!";
           let userAnswer = prompt("You said: " + userInput + "\nTeach me the answer:");
@@ -178,13 +222,27 @@
         } else {
           saveToCurrentChat(userInput, response);
         }
+
+        setTimeout(() => {
+          appendMessage("DeppSCAPT: " + response);
+        }, 400);
       }
 
-      setTimeout(() => {
-        appendMessage("DeppSCAPT: " + response);
-      }, 400);
-
       inputField.value = '';
+    }
+
+    // Check if the input is a math expression
+    function isMathExpression(input) {
+      return /^[0-9+\-*/^().\s]+$/.test(input); // Regex to check for basic math expressions
+    }
+
+    // Calculate the math expression
+    function calculateMathExpression(expression) {
+      try {
+        return math.evaluate(expression).toString();
+      } catch (error) {
+        return "Error in calculation!";
+      }
     }
 
     // Append message to chat
